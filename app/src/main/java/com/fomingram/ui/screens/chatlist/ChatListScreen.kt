@@ -1,20 +1,20 @@
-package com.fomingram.ui.screens.chat
+package com.fomingram.ui.screens.chatlist
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,84 +22,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fomingram.data.local.entity.MessageEntity
+import com.fomingram.data.local.entity.ContactEntity
 import com.fomingram.ui.components.AvatarCircle
 import com.fomingram.ui.components.TimeText
 import com.fomingram.ui.theme.*
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(
-    chatId: String,
-    contactName: String,
-    onBack: () -> Unit,
-    viewModel: ChatViewModel = viewModel(factory = ChatViewModel.factory(chatId))
+fun ChatListScreen(
+    onChatClick: (chatId: String, contactName: String) -> Unit,
+    viewModel: ChatListViewModel = viewModel(factory = ChatListViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val inputText by viewModel.inputText.collectAsState()
-    val showEmptyError by viewModel.showEmptyError.collectAsState()
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(uiState) {
-        if (uiState is ChatUiState.Success) {
-            val messages = (uiState as ChatUiState.Success).messages
-            if (messages.isNotEmpty()) {
-                scope.launch {
-                    listState.animateScrollToItem(messages.size - 1)
-                }
-            }
-        }
-    }
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    var showNewChatDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Назад",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AvatarCircle(name = contactName, size = 38.dp)
-                        Spacer(Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                contactName,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(OnlineGreen)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    "В сети · API: OK",
-                                    fontSize = 12.sp,
-                                    color = OnlineGreen
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        "Fomingram",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 22.sp
+                    )
                 },
                 actions = {
+                    IconButton(onClick = { }) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Поиск",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = { }) {
                         Icon(
                             Icons.Default.MoreVert,
@@ -113,156 +74,191 @@ fun ChatScreen(
                 )
             )
         },
-        bottomBar = {
-            MessageInputBar(
-                text = inputText,
-                showError = showEmptyError,
-                onTextChange = viewModel::onInputChange,
-                onSend = { viewModel.sendMessage(contactName) }
-            )
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showNewChatDialog = true },
+                containerColor = FomingramViolet,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Новый чат", tint = Color.White)
+            }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (val state = uiState) {
-                is ChatUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = FomingramViolet
-                    )
-                }
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = viewModel::onSearchQueryChange
+            )
 
-                is ChatUiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(state.message, color = MaterialTheme.colorScheme.error)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Попробуйте позже",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp
-                        )
+            when (val state = uiState) {
+                is ChatListUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = FomingramViolet)
                     }
                 }
 
-                is ChatUiState.Success -> {
-                    if (state.messages.isEmpty()) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                "Начните диалог!",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 16.sp
+                is ChatListUiState.Empty -> {
+                    EmptyChatsState()
+                }
+
+                is ChatListUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.message, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+
+                is ChatListUiState.Success -> {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(
+                            items = state.chats,
+                            key = { it.id }
+                        ) { contact ->
+                            SwipeToDeleteItem(
+                                onDelete = { viewModel.deleteChat(contact) }
+                            ) {
+                                ChatListItem(
+                                    contact = contact,
+                                    onClick = { onChatClick(contact.id, contact.name) }
+                                )
+                            }
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 80.dp),
+                                color = MaterialTheme.colorScheme.outline,
+                                thickness = 0.5.dp
                             )
                         }
-                    } else {
-                        MessageList(messages = state.messages, listState = listState)
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-private fun MessageList(
-    messages: List<MessageEntity>,
-    listState: androidx.compose.foundation.lazy.LazyListState
-) {
-    val grouped = messages.groupBy { formatDateHeader(it.timestamp) }
-
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 8.dp),
-        contentPadding = PaddingValues(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        grouped.forEach { (date, msgs) ->
-            item { DateHeader(date) }
-            items(msgs, key = { it.id }) { message ->
-                MessageBubble(message = message)
+    if (showNewChatDialog) {
+        NewChatDialog(
+            onDismiss = { showNewChatDialog = false },
+            onConfirm = { name ->
+                viewModel.createNewChat(name)
+                showNewChatDialog = false
             }
-        }
+        )
     }
 }
 
 @Composable
-private fun DateHeader(date: String) {
-    Box(
+private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = {
+            Text("Поиск диалогов…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
+        leadingIcon = {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(horizontal = 12.dp, vertical = 4.dp)
-        ) {
-            Text(date, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedBorderColor = Color.Transparent,
+            unfocusedBorderColor = Color.Transparent,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true
+    )
 }
 
 @Composable
-private fun MessageBubble(message: MessageEntity) {
-    val isMe = message.isFromMe
-
-    // Пузырь: у меня — фиолетовый всегда, у собеседника — из темы
-    val bubbleColor = if (isMe) BubbleMe else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
-    val timeColor = if (isMe) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-
-    val alignment = if (isMe) Alignment.End else Alignment.Start
-    val shape = if (isMe)
-        RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
-    else
-        RoundedCornerShape(18.dp, 18.dp, 18.dp, 4.dp)
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = alignment
+private fun ChatListItem(contact: ContactEntity, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .clip(shape)
-                .background(bubbleColor)
-                .padding(horizontal = 14.dp, vertical = 8.dp)
-        ) {
-            Column {
-                Text(
-                    text = message.text,
-                    color = textColor,
-                    fontSize = 15.sp,
-                    lineHeight = 20.sp
-                )
-                Spacer(Modifier.height(2.dp))
-                Row(
-                    modifier = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
+        Box {
+            AvatarCircle(name = contact.name, size = 52.dp)
+            if (contact.isOnline) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .align(Alignment.BottomEnd)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(2.dp)
                 ) {
-                    Text(
-                        text = formatTime(message.timestamp),
-                        fontSize = 11.sp,
-                        color = timeColor
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(OnlineGreen)
                     )
-                    if (isMe) {
-                        Spacer(Modifier.width(4.dp))
+                }
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = contact.name,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                TimeText(timestamp = contact.lastMessageTime)
+            }
+
+            Spacer(Modifier.height(3.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = contact.lastMessage.ifEmpty { "Нет сообщений" },
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (contact.unreadCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
+                            .clip(CircleShape)
+                            .background(UnreadBadge)
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = if (message.isRead) "✓✓" else "✓",
+                            text = if (contact.unreadCount > 99) "99+" else contact.unreadCount.toString(),
                             fontSize = 11.sp,
-                            color = if (message.isRead)
-                                Color(0xFFADD8E6)
-                            else Color.White.copy(alpha = 0.6f)
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
                 }
@@ -272,97 +268,134 @@ private fun MessageBubble(message: MessageEntity) {
 }
 
 @Composable
-private fun MessageInputBar(
-    text: String,
-    showError: Boolean,
-    onTextChange: (String) -> Unit,
-    onSend: () -> Unit
-) {
-    Column {
-        AnimatedVisibility(visible = showError, enter = fadeIn(), exit = fadeOut()) {
+private fun EmptyChatsState() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.AutoMirrored.Filled.Chat,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
             Text(
-                "Сообщение не может быть пустым",
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = 16.dp, vertical = 2.dp)
+                "Нет диалогов",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 18.sp
+            )
+            Text(
+                "Нажмите + чтобы начать чат",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 14.sp
             )
         }
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                IconButton(onClick = { }) {
-                    Icon(
-                        Icons.Default.AttachFile,
-                        contentDescription = "Прикрепить",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+    }
+}
 
+@Composable
+private fun NewChatDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                "Новый чат",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
                 OutlinedTextField(
-                    value = text,
-                    onValueChange = onTextChange,
-                    placeholder = {
-                        Text(
-                            "Написать сообщение…",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 15.sp
-                        )
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        showError = false
                     },
-                    modifier = Modifier.weight(1f),
+                    label = { Text("Имя контакта") },
+                    isError = showError,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = FomingramViolet,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = FomingramViolet,
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
-                    shape = RoundedCornerShape(24.dp),
-                    maxLines = 4
+                    singleLine = true
                 )
-
-                Spacer(Modifier.width(8.dp))
-
-                val canSend = text.isNotBlank()
-                FloatingActionButton(
-                    onClick = onSend,
-                    containerColor = if (canSend) FomingramViolet else MaterialTheme.colorScheme.surfaceVariant,
-                    shape = CircleShape,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Отправить",
-                        tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                AnimatedVisibility(visible = showError) {
+                    Text(
+                        "Введите имя контакта",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
             }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isBlank()) showError = true
+                    else onConfirm(name)
+                }
+            ) {
+                Text("Создать", color = FomingramViolet, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
-    }
+    )
 }
 
-private fun formatTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
-}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeToDeleteItem(
+    onDelete: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onDelete()
+                true
+            } else false
+        }
+    )
 
-private fun formatDateHeader(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-    return when {
-        diff < 86_400_000 -> "Сегодня"
-        diff < 172_800_000 -> "Вчера"
-        else -> SimpleDateFormat("d MMMM yyyy", Locale("ru")).format(Date(timestamp))
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            val color by animateColorAsState(
+                targetValue = when (dismissState.targetValue) {
+                    SwipeToDismissBoxValue.EndToStart -> Color(0xFFE53935)
+                    else -> MaterialTheme.colorScheme.background
+                },
+                label = "swipe_color"
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color)
+                    .padding(end = 24.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Удалить",
+                    tint = Color.White,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+        }
+    ) {
+        content()
     }
 }
