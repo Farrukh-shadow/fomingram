@@ -47,7 +47,6 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    // Scroll to bottom on new message
     LaunchedEffect(uiState) {
         if (uiState is ChatUiState.Success) {
             val messages = (uiState as ChatUiState.Success).messages
@@ -60,7 +59,7 @@ fun ChatScreen(
     }
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 navigationIcon = {
@@ -68,7 +67,7 @@ fun ChatScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Назад",
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
@@ -81,7 +80,7 @@ fun ChatScreen(
                                 contactName,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 16.sp,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -102,10 +101,16 @@ fun ChatScreen(
                 },
                 actions = {
                     IconButton(onClick = { }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Меню", tint = TextSecondary)
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "Меню",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkSurface)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         },
         bottomBar = {
@@ -137,20 +142,25 @@ fun ChatScreen(
                     ) {
                         Text(state.message, color = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.height(8.dp))
-                        Text("Попробуйте позже", color = TextSecondary, fontSize = 14.sp)
+                        Text(
+                            "Попробуйте позже",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 14.sp
+                        )
                     }
                 }
 
                 is ChatUiState.Success -> {
                     if (state.messages.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Начните диалог!", color = TextHint, fontSize = 16.sp)
+                            Text(
+                                "Начните диалог!",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 16.sp
+                            )
                         }
                     } else {
-                        MessageList(
-                            messages = state.messages,
-                            listState = listState
-                        )
+                        MessageList(messages = state.messages, listState = listState)
                     }
                 }
             }
@@ -174,9 +184,7 @@ private fun MessageList(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         grouped.forEach { (date, msgs) ->
-            item {
-                DateHeader(date)
-            }
+            item { DateHeader(date) }
             items(msgs, key = { it.id }) { message ->
                 MessageBubble(message = message)
             }
@@ -195,10 +203,10 @@ private fun DateHeader(date: String) {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(DarkSurfaceVariant)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
-            Text(date, fontSize = 12.sp, color = TextSecondary)
+            Text(date, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -206,7 +214,12 @@ private fun DateHeader(date: String) {
 @Composable
 private fun MessageBubble(message: MessageEntity) {
     val isMe = message.isFromMe
-    val bubbleColor = if (isMe) BubbleMe else BubbleOther
+
+    // Пузырь: у меня — фиолетовый всегда, у собеседника — из темы
+    val bubbleColor = if (isMe) BubbleMe else MaterialTheme.colorScheme.surfaceVariant
+    val textColor = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
+    val timeColor = if (isMe) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+
     val alignment = if (isMe) Alignment.End else Alignment.Start
     val shape = if (isMe)
         RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
@@ -227,7 +240,7 @@ private fun MessageBubble(message: MessageEntity) {
             Column {
                 Text(
                     text = message.text,
-                    color = Color.White,
+                    color = textColor,
                     fontSize = 15.sp,
                     lineHeight = 20.sp
                 )
@@ -240,7 +253,7 @@ private fun MessageBubble(message: MessageEntity) {
                     Text(
                         text = formatTime(message.timestamp),
                         fontSize = 11.sp,
-                        color = if (isMe) Color.White.copy(alpha = 0.7f) else TextHint
+                        color = timeColor
                     )
                     if (isMe) {
                         Spacer(Modifier.width(4.dp))
@@ -272,11 +285,14 @@ private fun MessageInputBar(
                 color = MaterialTheme.colorScheme.error,
                 fontSize = 12.sp,
                 modifier = Modifier
-                    .background(DarkSurface)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(horizontal = 16.dp, vertical = 2.dp)
             )
         }
-        Surface(color = DarkSurface, tonalElevation = 2.dp) {
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp
+        ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -285,21 +301,31 @@ private fun MessageInputBar(
                 verticalAlignment = Alignment.Bottom
             ) {
                 IconButton(onClick = { }) {
-                    Icon(Icons.Default.AttachFile, contentDescription = "Прикрепить", tint = TextSecondary)
+                    Icon(
+                        Icons.Default.AttachFile,
+                        contentDescription = "Прикрепить",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 OutlinedTextField(
                     value = text,
                     onValueChange = onTextChange,
-                    placeholder = { Text("Написать сообщение…", color = TextHint, fontSize = 15.sp) },
+                    placeholder = {
+                        Text(
+                            "Написать сообщение…",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 15.sp
+                        )
+                    },
                     modifier = Modifier.weight(1f),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = DarkSurfaceVariant,
-                        unfocusedContainerColor = DarkSurfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     shape = RoundedCornerShape(24.dp),
                     maxLines = 4
@@ -310,14 +336,14 @@ private fun MessageInputBar(
                 val canSend = text.isNotBlank()
                 FloatingActionButton(
                     onClick = onSend,
-                    containerColor = if (canSend) FomingramViolet else DarkSurfaceVariant,
+                    containerColor = if (canSend) FomingramViolet else MaterialTheme.colorScheme.surfaceVariant,
                     shape = CircleShape,
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Отправить",
-                        tint = if (canSend) Color.White else TextSecondary,
+                        tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
