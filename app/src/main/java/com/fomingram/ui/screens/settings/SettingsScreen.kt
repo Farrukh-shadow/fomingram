@@ -18,10 +18,12 @@ import com.fomingram.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    isDarkTheme: Boolean = true,
+    onThemeChange: (Boolean) -> Unit = {}
+) {
     var notificationsEnabled by remember { mutableStateOf(true) }
     var soundEnabled by remember { mutableStateOf(true) }
-    var darkModeEnabled by remember { mutableStateOf(true) }
 
     Scaffold(
         containerColor = DarkBackground,
@@ -59,16 +61,13 @@ fun SettingsScreen() {
             }
 
             Spacer(Modifier.height(16.dp))
-
-            SettingsSection(title = "Внешний вид") {
-                SwitchItem(
-                    icon = Icons.Default.DarkMode,
-                    title = "Тёмная тема",
-                    subtitle = "Используется тёмное оформление",
-                    checked = darkModeEnabled,
-                    onCheckedChange = { darkModeEnabled = it }
-                )
-            }
+            SwitchItem(
+                icon = Icons.Default.DarkMode,
+                title = "Тёмная тема",
+                subtitle = "Используется тёмное оформление",
+                checked = isDarkTheme,
+                onCheckedChange = onThemeChange
+            )
 
             Spacer(Modifier.height(16.dp))
 
