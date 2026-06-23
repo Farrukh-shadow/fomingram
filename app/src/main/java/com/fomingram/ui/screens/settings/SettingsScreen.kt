@@ -26,11 +26,19 @@ fun SettingsScreen(
     var soundEnabled by remember { mutableStateOf(true) }
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Настройки", fontWeight = FontWeight.Bold, color = TextPrimary) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkSurface)
+                title = {
+                    Text(
+                        "Настройки",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { paddingValues ->
@@ -50,7 +58,11 @@ fun SettingsScreen(
                     checked = notificationsEnabled,
                     onCheckedChange = { notificationsEnabled = it }
                 )
-                HorizontalDivider(color = Divider, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline,
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(start = 56.dp)
+                )
                 SwitchItem(
                     icon = Icons.Default.VolumeUp,
                     title = "Звук",
@@ -61,19 +73,35 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(16.dp))
-            SwitchItem(
-                icon = Icons.Default.DarkMode,
-                title = "Тёмная тема",
-                subtitle = "Используется тёмное оформление",
-                checked = isDarkTheme,
-                onCheckedChange = onThemeChange
-            )
+
+            // Переключатель темы — вне карточки, отдельно
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                SwitchItem(
+                    icon = Icons.Default.DarkMode,
+                    title = "Тёмная тема",
+                    subtitle = "Используется тёмное оформление",
+                    checked = isDarkTheme,
+                    onCheckedChange = onThemeChange
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
             SettingsSection(title = "Данные") {
                 SettingsItem(Icons.Default.Storage, "Очистить кэш", "Освободить место") { }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline,
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(start = 56.dp)
+                )
                 SettingsItem(Icons.Default.CloudDownload, "Резервная копия", "Сохранить данные") { }
             }
 
@@ -81,17 +109,28 @@ fun SettingsScreen(
 
             SettingsSection(title = "О приложении") {
                 SettingsItem(Icons.Default.Info, "Версия", "Fomingram 1.0.0") { }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline,
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(start = 56.dp)
+                )
                 SettingsItem(Icons.Default.Code, "Разработчик", "Razzokov Farrukh") { }
-                HorizontalDivider(color = Divider, thickness = 0.5.dp, modifier = Modifier.padding(start = 56.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline,
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(start = 56.dp)
+                )
                 SettingsItem(Icons.Default.Shield, "Политика конфиденциальности", "") { }
             }
 
             Spacer(Modifier.height(24.dp))
 
-            // Version watermark
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("Fomingram v1.0.0 · MVVM + Room + Retrofit", fontSize = 12.sp, color = TextHint)
+                Text(
+                    "Fomingram v1.0.0 · MVVM + Room + Retrofit",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -104,13 +143,15 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
         Text(
             title,
             fontSize = 13.sp,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
         )
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column { content() }
@@ -132,12 +173,17 @@ private fun SwitchItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = FomingramViolet, modifier = Modifier.size(22.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = FomingramViolet,
+            modifier = Modifier.size(22.dp)
+        )
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, fontSize = 15.sp)
+            Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
             if (subtitle.isNotEmpty()) {
-                Text(subtitle, color = TextSecondary, fontSize = 13.sp)
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
             }
         }
         Switch(
@@ -152,21 +198,35 @@ private fun SwitchItem(
 }
 
 @Composable
-private fun SettingsItem(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+private fun SettingsItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = FomingramViolet, modifier = Modifier.size(22.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = FomingramViolet,
+            modifier = Modifier.size(22.dp)
+        )
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, fontSize = 15.sp)
+            Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
             if (subtitle.isNotEmpty()) {
-                Text(subtitle, color = TextSecondary, fontSize = 13.sp)
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
             }
         }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextHint)
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
