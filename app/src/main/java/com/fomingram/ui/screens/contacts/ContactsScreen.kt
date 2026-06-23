@@ -33,16 +33,28 @@ fun ContactsScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Контакты", fontWeight = FontWeight.Bold, color = TextPrimary) },
+                title = {
+                    Text(
+                        "Контакты",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
                 actions = {
                     IconButton(onClick = { }) {
-                        Icon(Icons.Default.PersonAdd, contentDescription = "Добавить", tint = FomingramViolet)
+                        Icon(
+                            Icons.Default.PersonAdd,
+                            contentDescription = "Добавить",
+                            tint = FomingramViolet
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkSurface)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { paddingValues ->
@@ -54,18 +66,29 @@ fun ContactsScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = viewModel::onSearchQueryChange,
-                placeholder = { Text("Поиск контактов…", color = TextHint) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                placeholder = {
+                    Text(
+                        "Поиск контактов…",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = DarkSurfaceVariant,
-                    unfocusedContainerColor = DarkSurfaceVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 ),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true
@@ -79,7 +102,10 @@ fun ContactsScreen(
                 }
                 is ChatListUiState.Empty -> {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Нет контактов", color = TextSecondary)
+                        Text(
+                            "Нет контактов",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
                 is ChatListUiState.Error -> {
@@ -99,7 +125,10 @@ fun ContactsScreen(
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = FomingramViolet,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                                    modifier = Modifier.padding(
+                                        horizontal = 16.dp,
+                                        vertical = 6.dp
+                                    )
                                 )
                             }
                             items(contacts, key = { it.id }) { contact ->
@@ -113,19 +142,33 @@ fun ContactsScreen(
                                     AvatarCircle(name = contact.name, size = 46.dp)
                                     Spacer(Modifier.width(12.dp))
                                     Column {
-                                        Text(contact.name, fontWeight = FontWeight.Medium, color = TextPrimary, fontSize = 16.sp)
+                                        Text(
+                                            contact.name,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 16.sp
+                                        )
                                         if (contact.phone.isNotEmpty()) {
-                                            Text(contact.phone, color = TextSecondary, fontSize = 13.sp)
+                                            Text(
+                                                contact.phone,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 13.sp
+                                            )
                                         } else {
                                             Text(
                                                 if (contact.isOnline) "В сети" else "Не в сети",
-                                                color = if (contact.isOnline) OnlineGreen else TextHint,
+                                                color = if (contact.isOnline) OnlineGreen
+                                                        else MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontSize = 13.sp
                                             )
                                         }
                                     }
                                 }
-                                HorizontalDivider(modifier = Modifier.padding(start = 74.dp), color = Divider, thickness = 0.5.dp)
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 74.dp),
+                                    color = MaterialTheme.colorScheme.outline,
+                                    thickness = 0.5.dp
+                                )
                             }
                         }
                     }
