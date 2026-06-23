@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.fomingram.ui.components.AvatarCircle
 import com.fomingram.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,16 +33,28 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Профиль", fontWeight = FontWeight.Bold, color = TextPrimary) },
+                title = {
+                    Text(
+                        "Профиль",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
                 actions = {
                     IconButton(onClick = { viewModel.loadUserProfile() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Обновить", tint = FomingramViolet)
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Обновить",
+                            tint = FomingramViolet
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkSurface)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { paddingValues ->
@@ -64,7 +75,10 @@ fun ProfileScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = FomingramViolet)
                             Spacer(Modifier.height(16.dp))
-                            Text("Загрузка профиля…", color = TextSecondary)
+                            Text(
+                                "Загрузка профиля…",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -84,13 +98,23 @@ fun ProfileScreen(
                                 tint = MaterialTheme.colorScheme.error
                             )
                             Spacer(Modifier.height(12.dp))
-                            Text(state.message, color = MaterialTheme.colorScheme.error, fontSize = 16.sp)
+                            Text(
+                                state.message,
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 16.sp
+                            )
                             Spacer(Modifier.height(8.dp))
-                            Text("Нет подключения к интернету", color = TextSecondary, fontSize = 13.sp)
+                            Text(
+                                "Нет подключения к интернету",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp
+                            )
                             Spacer(Modifier.height(16.dp))
                             Button(
                                 onClick = { viewModel.loadUserProfile() },
-                                colors = ButtonDefaults.buttonColors(containerColor = FomingramViolet)
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = FomingramViolet
+                                )
                             ) {
                                 Icon(Icons.Default.Refresh, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
@@ -103,13 +127,16 @@ fun ProfileScreen(
                 is ProfileUiState.Success -> {
                     val user = state.user
 
-                    // Profile header with gradient
+                    // Profile header
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(DarkSurface, DarkBackground)
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.surface,
+                                        MaterialTheme.colorScheme.background
+                                    )
                                 )
                             )
                             .padding(24.dp),
@@ -126,7 +153,10 @@ fun ProfileScreen(
                                         .border(
                                             2.dp,
                                             brush = Brush.linearGradient(
-                                                colors = listOf(FomingramGradientStart, FomingramGradientEnd)
+                                                colors = listOf(
+                                                    FomingramGradientStart,
+                                                    FomingramGradientEnd
+                                                )
                                             ),
                                             CircleShape
                                         ),
@@ -137,7 +167,7 @@ fun ProfileScreen(
                                         .size(20.dp)
                                         .align(Alignment.BottomEnd)
                                         .clip(CircleShape)
-                                        .background(DarkBackground)
+                                        .background(MaterialTheme.colorScheme.background)
                                         .padding(3.dp)
                                 ) {
                                     Box(
@@ -153,16 +183,19 @@ fun ProfileScreen(
                                 "${user.name.first} ${user.name.last}",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 22.sp,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(Modifier.height(4.dp))
-                            Text("@${user.login.username}", color = FomingramViolet, fontSize = 14.sp)
+                            Text(
+                                "@${user.login.username}",
+                                color = FomingramViolet,
+                                fontSize = 14.sp
+                            )
                             Spacer(Modifier.height(8.dp))
-                            // API Status badge
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
-                                    .background(Color(0xFF1A3A1A))
+                                    .background(OnlineGreen.copy(alpha = 0.15f))
                                     .padding(horizontal = 12.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -173,25 +206,32 @@ fun ProfileScreen(
                                         .background(OnlineGreen)
                                 )
                                 Spacer(Modifier.width(6.dp))
-                                Text(state.apiStatus, color = OnlineGreen, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                Text(
+                                    state.apiStatus,
+                                    color = OnlineGreen,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
                         }
                     }
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Info cards
                     ProfileInfoCard(
                         items = listOf(
                             Triple(Icons.Default.Phone, "Телефон", user.phone),
                             Triple(Icons.Default.Email, "Email", user.email),
-                            Triple(Icons.Default.LocationOn, "Город", "${user.location.city}, ${user.location.country}")
+                            Triple(
+                                Icons.Default.LocationOn,
+                                "Город",
+                                "${user.location.city}, ${user.location.country}"
+                            )
                         )
                     )
 
                     Spacer(Modifier.height(16.dp))
 
-                    // App info card
                     ProfileSection(title = "О приложении") {
                         InfoRow(Icons.Default.Info, "Версия", "1.0.0")
                         InfoRow(Icons.Default.Storage, "База данных", "Room SQLite")
@@ -212,14 +252,20 @@ private fun ProfileInfoCard(items: List<Triple<ImageVector, String, String>>) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(4.dp)) {
             items.forEachIndexed { idx, (icon, label, value) ->
                 InfoRow(icon, label, value)
                 if (idx < items.lastIndex) {
-                    HorizontalDivider(color = Divider, thickness = 0.5.dp, modifier = Modifier.padding(start = 52.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline,
+                        thickness = 0.5.dp,
+                        modifier = Modifier.padding(start = 52.dp)
+                    )
                 }
             }
         }
@@ -232,13 +278,15 @@ private fun ProfileSection(title: String, content: @Composable ColumnScope.() ->
         Text(
             title,
             fontSize = 13.sp,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
         )
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(4.dp)) {
@@ -256,11 +304,24 @@ private fun InfoRow(icon: ImageVector, label: String, value: String) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = FomingramViolet, modifier = Modifier.size(20.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = FomingramViolet,
+            modifier = Modifier.size(20.dp)
+        )
         Spacer(Modifier.width(16.dp))
         Column {
-            Text(label, fontSize = 12.sp, color = TextSecondary)
-            Text(value, fontSize = 15.sp, color = TextPrimary)
+            Text(
+                label,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                value,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
