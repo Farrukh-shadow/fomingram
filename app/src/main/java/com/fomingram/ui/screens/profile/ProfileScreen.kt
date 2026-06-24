@@ -31,6 +31,9 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val edits by viewModel.edits.collectAsState()
+
+    var showEditDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -44,11 +47,20 @@ fun ProfileScreen(
                     )
                 },
                 actions = {
+                    if (uiState is ProfileUiState.Success) {
+                        IconButton(onClick = { showEditDialog = true }) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Редактировать",
+                                tint = FomingramViolet
+                            )
+                        }
+                    }
                     IconButton(onClick = { viewModel.loadUserProfile() }) {
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = "Обновить",
-                            tint = FomingramViolet
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -67,9 +79,7 @@ fun ProfileScreen(
             when (val state = uiState) {
                 is ProfileUiState.Fetching -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp),
+                        modifier = Modifier.fillMaxWidth().height(300.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -85,9 +95,7 @@ fun ProfileScreen(
 
                 is ProfileUiState.Error -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp),
+                        modifier = Modifier.fillMaxWidth().height(300.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -98,11 +106,7 @@ fun ProfileScreen(
                                 tint = MaterialTheme.colorScheme.error
                             )
                             Spacer(Modifier.height(12.dp))
-                            Text(
-                                state.message,
-                                color = MaterialTheme.colorScheme.error,
-                                fontSize = 16.sp
-                            )
+                            Text(state.message, color = MaterialTheme.colorScheme.error, fontSize = 16.sp)
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 "Нет подключения к интернету",
@@ -112,9 +116,7 @@ fun ProfileScreen(
                             Spacer(Modifier.height(16.dp))
                             Button(
                                 onClick = { viewModel.loadUserProfile() },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = FomingramViolet
-                                )
+                                colors = ButtonDefaults.buttonColors(containerColor = FomingramViolet)
                             ) {
                                 Icon(Icons.Default.Refresh, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
@@ -127,7 +129,10 @@ fun ProfileScreen(
                 is ProfileUiState.Success -> {
                     val user = state.user
 
-                    // Profile header
+                    val displayName = edits.displayName.ifEmpty { "${user.name.first} ${user.name.last}" }
+                    val displayAvatar = edits.avatarUrl.ifEmpty { user.picture.large }
+                    val displayStatus = edits.status
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -143,9 +148,10 @@ fun ProfileScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
                             Box {
                                 AsyncImage(
-                                    model = user.picture.large,
+                                    model = displayAvatar,
                                     contentDescription = "Аватар",
                                     modifier = Modifier
                                         .size(96.dp)
@@ -153,10 +159,7 @@ fun ProfileScreen(
                                         .border(
                                             2.dp,
                                             brush = Brush.linearGradient(
-                                                colors = listOf(
-                                                    FomingramGradientStart,
-                                                    FomingramGradientEnd
-                                                )
+                                                colors = listOf(FomingramGradientStart, FomingramGradientEnd)
                                             ),
                                             CircleShape
                                         ),
@@ -178,9 +181,11 @@ fun ProfileScreen(
                                     )
                                 }
                             }
+
                             Spacer(Modifier.height(12.dp))
+
                             Text(
-                                "${user.name.first} ${user.name.last}",
+                                displayName,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 22.sp,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -191,7 +196,17 @@ fun ProfileScreen(
                                 color = FomingramViolet,
                                 fontSize = 14.sp
                             )
+                            Spacer(Modifier.height(6.dp))
+
+                            Text(
+                                displayStatus,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+
                             Spacer(Modifier.height(8.dp))
+
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
@@ -233,13 +248,26 @@ fun ProfileScreen(
                     Spacer(Modifier.height(16.dp))
 
                     ProfileSection(title = "О приложении") {
-                        InfoRow(Icons.Default.Info, "Версия", "1.0.0")
+                        InfoRow(Icons.Default.Info, "Версия", "6.7.0")
                         InfoRow(Icons.Default.Storage, "База данных", "Room SQLite")
                         InfoRow(Icons.Default.CloudDone, "API", "RandomUser API")
                         InfoRow(Icons.Default.Architecture, "Архитектура", "MVVM + Clean")
                     }
 
                     Spacer(Modifier.height(24.dp))
+
+                    if (showEditDialog) {
+                        EditProfileDialog(
+                            currentName = displayName,
+                            currentStatus = displayStatus,
+                            currentAvatarUrl = displayAvatar,
+                            onDismiss = { showEditDialog = false },
+                            onSave = { name, status, avatarUrl ->
+                                viewModel.saveEdits(name, status, avatarUrl)
+                                showEditDialog = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -247,14 +275,142 @@ fun ProfileScreen(
 }
 
 @Composable
+private fun EditProfileDialog(
+    currentName: String,
+    currentStatus: String,
+    currentAvatarUrl: String,
+    onDismiss: () -> Unit,
+    onSave: (name: String, status: String, avatarUrl: String) -> Unit
+) {
+    var name by remember { mutableStateOf(currentName) }
+    var status by remember { mutableStateOf(currentStatus) }
+    var avatarUrl by remember { mutableStateOf(currentAvatarUrl) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                "Редактировать профиль",
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = "Превью аватара",
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, FomingramViolet, CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Имя") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            tint = FomingramViolet,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = FomingramViolet,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = FomingramViolet,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = status,
+                    onValueChange = { status = it },
+                    label = { Text("Статус") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.ModeEdit,
+                            contentDescription = null,
+                            tint = FomingramViolet,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    placeholder = {
+                        Text("Например: На работе", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = FomingramViolet,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = FomingramViolet,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = avatarUrl,
+                    onValueChange = { avatarUrl = it },
+                    label = { Text("Ссылка на аватар") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Link,
+                            contentDescription = null,
+                            tint = FomingramViolet,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    placeholder = {
+                        Text("https://...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = FomingramViolet,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = FomingramViolet,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(name, status, avatarUrl) },
+                colors = ButtonDefaults.buttonColors(containerColor = FomingramViolet)
+            ) {
+                Text("Сохранить", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    )
+}
+
+@Composable
 private fun ProfileInfoCard(items: List<Triple<ImageVector, String, String>>) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(4.dp)) {
@@ -284,14 +440,10 @@ private fun ProfileSection(title: String, content: @Composable ColumnScope.() ->
         )
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(4.dp)) {
-                content()
-            }
+            Column(modifier = Modifier.padding(4.dp)) { content() }
         }
     }
 }
@@ -299,29 +451,14 @@ private fun ProfileSection(title: String, content: @Composable ColumnScope.() ->
 @Composable
 private fun InfoRow(icon: ImageVector, label: String, value: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = FomingramViolet,
-            modifier = Modifier.size(20.dp)
-        )
+        Icon(icon, contentDescription = null, tint = FomingramViolet, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(16.dp))
         Column {
-            Text(
-                label,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                value,
-                fontSize = 15.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
