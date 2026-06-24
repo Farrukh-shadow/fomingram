@@ -63,6 +63,12 @@ class ChatViewModel(
         }
     }
 
+    fun deleteMessage(message: MessageEntity) {
+        viewModelScope.launch {
+            repository.deleteMessage(message)
+        }
+    }
+
     companion object {
         fun factory(chatId: String): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
