@@ -19,7 +19,9 @@ class MessageRepository(
 
     fun searchContacts(query: String): Flow<List<ContactEntity>> =
         contactDao.searchContacts(query)
-
+    suspend fun deleteMessage(message: MessageEntity) {
+        messageDao.deleteMessage(message)
+    }
     suspend fun sendMessage(chatId: String, text: String, contactName: String): Result<Unit> {
         return try {
             val message = MessageEntity(
@@ -30,7 +32,6 @@ class MessageRepository(
             )
             messageDao.insertMessage(message)
 
-            // Update contact's last message
             val contact = contactDao.getContactById(chatId)
             contact?.let {
                 contactDao.updateContact(
