@@ -62,7 +62,11 @@ class ChatViewModel(
             repository.sendMessage(chatId, text, contactName)
         }
     }
-
+    fun sendImage(imageUri: String, contactName: String) {
+        viewModelScope.launch {
+            repository.sendImage(chatId, imageUri, contactName)
+        }
+    }
     fun deleteMessage(message: MessageEntity) {
         viewModelScope.launch {
             repository.deleteMessage(message)
