@@ -1,9 +1,14 @@
 package com.fomingram.ui.screens.chat
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,19 +28,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fomingram.data.local.entity.MessageEntity
 import com.fomingram.ui.components.AvatarCircle
-import com.fomingram.ui.components.TimeText
 import com.fomingram.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(
     chatId: String,
@@ -47,6 +54,8 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
+    var selectedMessage by remember { mutableStateOf<MessageEntity?>(null) }
+
     LaunchedEffect(uiState) {
         if (uiState is ChatUiState.Success) {
             val messages = (uiState as ChatUiState.Success).messages
@@ -56,6 +65,17 @@ fun ChatScreen(
                 }
             }
         }
+    }
+
+    selectedMessage?.let { message ->
+        MessageActionsDialog(
+            message = message,
+            onDismiss = { selectedMessage = null },
+            onDelete = {
+                viewModel.deleteMessage(message)
+                selectedMessage = null
+            }
+        )
     }
 
     Scaffold(
@@ -90,11 +110,7 @@ fun ChatScreen(
                                         .background(OnlineGreen)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                Text(
-                                    "В сети · API: OK",
-                                    fontSize = 12.sp,
-                                    color = OnlineGreen
-                                )
+                                Text("В сети · API: OK", fontSize = 12.sp, color = OnlineGreen)
                             }
                         }
                     }
@@ -134,7 +150,6 @@ fun ChatScreen(
                         color = FomingramViolet
                     )
                 }
-
                 is ChatUiState.Error -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
@@ -149,7 +164,6 @@ fun ChatScreen(
                         )
                     }
                 }
-
                 is ChatUiState.Success -> {
                     if (state.messages.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -160,7 +174,11 @@ fun ChatScreen(
                             )
                         }
                     } else {
-                        MessageList(messages = state.messages, listState = listState)
+                        MessageList(
+                            messages = state.messages,
+                            listState = listState,
+                            onLongPress = { selectedMessage = it }
+                        )
                     }
                 }
             }
@@ -169,9 +187,99 @@ fun ChatScreen(
 }
 
 @Composable
+private fun MessageActionsDialog(
+    message: MessageEntity,
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val context = LocalContext.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                "Действия с сообщением",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = message.text,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp,
+                    maxLines = 3,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(10.dp)
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                TextButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                as ClipboardManager
+                        clipboard.setPrimaryClip(
+                            ClipData.newPlainText("message", message.text)
+                        )
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = null,
+                        tint = FomingramViolet,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        "Копировать",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                if (message.isFromMe) {
+                    TextButton(
+                        onClick = onDelete,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Удалить",
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Отмена", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    )
+}
+
+@Composable
 private fun MessageList(
     messages: List<MessageEntity>,
-    listState: androidx.compose.foundation.lazy.LazyListState
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onLongPress: (MessageEntity) -> Unit
 ) {
     val grouped = messages.groupBy { formatDateHeader(it.timestamp) }
 
@@ -186,7 +294,10 @@ private fun MessageList(
         grouped.forEach { (date, msgs) ->
             item { DateHeader(date) }
             items(msgs, key = { it.id }) { message ->
-                MessageBubble(message = message)
+                MessageBubble(
+                    message = message,
+                    onLongPress = { onLongPress(message) }
+                )
             }
         }
     }
@@ -211,11 +322,13 @@ private fun DateHeader(date: String) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageBubble(message: MessageEntity) {
+private fun MessageBubble(
+    message: MessageEntity,
+    onLongPress: () -> Unit
+) {
     val isMe = message.isFromMe
-
-    // Пузырь: у меня — фиолетовый всегда, у собеседника — из темы
     val bubbleColor = if (isMe) BubbleMe else MaterialTheme.colorScheme.surfaceVariant
     val textColor = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
     val timeColor = if (isMe) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
@@ -235,6 +348,10 @@ private fun MessageBubble(message: MessageEntity) {
                 .widthIn(max = 280.dp)
                 .clip(shape)
                 .background(bubbleColor)
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = onLongPress   // ← долгое нажатие
+                )
                 .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
             Column {
@@ -289,10 +406,7 @@ private fun MessageInputBar(
                     .padding(horizontal = 16.dp, vertical = 2.dp)
             )
         }
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp
-        ) {
+        Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -336,14 +450,16 @@ private fun MessageInputBar(
                 val canSend = text.isNotBlank()
                 FloatingActionButton(
                     onClick = onSend,
-                    containerColor = if (canSend) FomingramViolet else MaterialTheme.colorScheme.surfaceVariant,
+                    containerColor = if (canSend) FomingramViolet
+                    else MaterialTheme.colorScheme.surfaceVariant,
                     shape = CircleShape,
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Отправить",
-                        tint = if (canSend) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (canSend) Color.White
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
