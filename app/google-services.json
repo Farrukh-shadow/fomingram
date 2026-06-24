@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "80787910442",
+    "project_id": "fomingram",
+    "storage_bucket": "fomingram.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:80787910442:android:4bf4f66f1cf58a91093853",
+        "android_client_info": {
+          "package_name": "com.fomingram"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIoqHYRY-jN04UMw8QYoyjru3EtjgPM2Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
