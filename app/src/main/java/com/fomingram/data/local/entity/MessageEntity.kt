@@ -8,8 +8,9 @@ data class MessageEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val chatId: String,
     val text: String,
-    val sender: String,         // "me" | contact name
+    val sender: String,         
     val isFromMe: Boolean,
     val timestamp: Long = System.currentTimeMillis(),
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val imageUri: String? = null
 )
