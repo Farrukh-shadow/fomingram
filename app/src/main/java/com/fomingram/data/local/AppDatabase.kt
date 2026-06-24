@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.fomingram.data.local.dao.ContactDao
 import com.fomingram.data.local.dao.MessageDao
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [MessageEntity::class, ContactEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -27,6 +28,14 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE messages ADD COLUMN imageUri TEXT"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -34,6 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "fomingram_database"
                 )
+                    .addMigrations(MIGRATION_1_2)
                     .addCallback(DatabaseCallback())
                     .build()
                     .also { INSTANCE = it }
@@ -105,14 +115,50 @@ abstract class AppDatabase : RoomDatabase() {
             )
             contacts.forEach { contactDao.insertContact(it) }
 
-            // Seed messages for Мария Иванова chat
             val mariaMessages = listOf(
-                MessageEntity(chatId = "1", text = "Привет! Ты уже видел новый проект? 🔥", sender = "Мария Иванова", isFromMe = false, timestamp = now - 300_000),
-                MessageEntity(chatId = "1", text = "Да, выглядит круто! Уже изучаю архитектуру 🤩", sender = "me", isFromMe = true, timestamp = now - 270_000),
-                MessageEntity(chatId = "1", text = "Fomingram — это вообще бомба! MVVM + Room = 🖊", sender = "Мария Иванова", isFromMe = false, timestamp = now - 240_000),
-                MessageEntity(chatId = "1", text = "Согласен, Retrofit тоже хорошо зашёл 👍", sender = "me", isFromMe = true, timestamp = now - 210_000),
-                MessageEntity(chatId = "1", text = "Когда покажешь демо? Очень жду! ☺", sender = "Мария Иванова", isFromMe = false, timestamp = now - 180_000, isRead = false),
-                MessageEntity(chatId = "1", text = "Скоро, финальные правки делаю ✏", sender = "me", isFromMe = true, timestamp = now - 60_000)
+                MessageEntity(
+                    chatId = "1",
+                    text = "Привет! Ты уже видел новый проект? 🔥",
+                    sender = "Мария Иванова",
+                    isFromMe = false,
+                    timestamp = now - 300_000
+                ),
+                MessageEntity(
+                    chatId = "1",
+                    text = "Да, выглядит круто! Уже изучаю архитектуру 🤩",
+                    sender = "me",
+                    isFromMe = true,
+                    timestamp = now - 270_000
+                ),
+                MessageEntity(
+                    chatId = "1",
+                    text = "Fomingram — это вообще бомба! MVVM + Room = 🖊",
+                    sender = "Мария Иванова",
+                    isFromMe = false,
+                    timestamp = now - 240_000
+                ),
+                MessageEntity(
+                    chatId = "1",
+                    text = "Согласен, Retrofit тоже хорошо зашёл 👍",
+                    sender = "me",
+                    isFromMe = true,
+                    timestamp = now - 210_000
+                ),
+                MessageEntity(
+                    chatId = "1",
+                    text = "Когда покажешь демо? Очень жду! ☺",
+                    sender = "Мария Иванова",
+                    isFromMe = false,
+                    timestamp = now - 180_000,
+                    isRead = false
+                ),
+                MessageEntity(
+                    chatId = "1",
+                    text = "Скоро, финальные правки делаю ✏",
+                    sender = "me",
+                    isFromMe = true,
+                    timestamp = now - 60_000
+                )
             )
             mariaMessages.forEach { messageDao.insertMessage(it) }
         }
