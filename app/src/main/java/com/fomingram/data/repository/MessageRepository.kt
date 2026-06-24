@@ -22,6 +22,31 @@ class MessageRepository(
     suspend fun deleteMessage(message: MessageEntity) {
         messageDao.deleteMessage(message)
     }
+    suspend fun sendImage(chatId: String, imageUri: String, contactName: String): Result<Unit> {
+        return try {
+            val message = MessageEntity(
+                chatId = chatId,
+                text = "",
+                sender = "me",
+                isFromMe = true,
+                imageUri = imageUri
+            )
+            messageDao.insertMessage(message)
+
+            val contact = contactDao.getContactById(chatId)
+            contact?.let {
+                contactDao.updateContact(
+                    it.copy(
+                        lastMessage = "📷 Фото",
+                        lastMessageTime = System.currentTimeMillis()
+                    )
+                )
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
     suspend fun sendMessage(chatId: String, text: String, contactName: String): Result<Unit> {
         return try {
             val message = MessageEntity(
