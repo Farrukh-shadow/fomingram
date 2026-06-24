@@ -3,6 +3,8 @@ package com.fomingram.ui.screens.chat
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,11 +30,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.fomingram.data.local.entity.MessageEntity
 import com.fomingram.ui.components.AvatarCircle
 import com.fomingram.ui.theme.*
@@ -53,16 +57,22 @@ fun ChatScreen(
     val showEmptyError by viewModel.showEmptyError.collectAsState()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-
     var selectedMessage by remember { mutableStateOf<MessageEntity?>(null) }
+
+    // Лаунчер для галереи
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            viewModel.sendImage(it.toString(), contactName)
+        }
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is ChatUiState.Success) {
             val messages = (uiState as ChatUiState.Success).messages
             if (messages.isNotEmpty()) {
-                scope.launch {
-                    listState.animateScrollToItem(messages.size - 1)
-                }
+                scope.launch { listState.animateScrollToItem(messages.size - 1) }
             }
         }
     }
@@ -134,7 +144,8 @@ fun ChatScreen(
                 text = inputText,
                 showError = showEmptyError,
                 onTextChange = viewModel::onInputChange,
-                onSend = { viewModel.sendMessage(contactName) }
+                onSend = { viewModel.sendMessage(contactName) },
+                onAttachClick = { galleryLauncher.launch("image/*") }  // ← открывает галерею
             )
         }
     ) { paddingValues ->
@@ -207,43 +218,57 @@ private fun MessageActionsDialog(
         },
         text = {
             Column {
-                Text(
-                    text = message.text,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 13.sp,
-                    maxLines = 3,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(10.dp)
-                )
+                if (message.imageUri != null) {
+                    AsyncImage(
+                        model = message.imageUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = message.text,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp,
+                        maxLines = 3,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(10.dp)
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
 
-                TextButton(
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
-                                as ClipboardManager
-                        clipboard.setPrimaryClip(
-                            ClipData.newPlainText("message", message.text)
+                if (message.imageUri == null) {
+                    TextButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                    as ClipboardManager
+                            clipboard.setPrimaryClip(
+                                ClipData.newPlainText("message", message.text)
+                            )
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = null,
+                            tint = FomingramViolet,
+                            modifier = Modifier.size(18.dp)
                         )
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        Icons.Default.ContentCopy,
-                        contentDescription = null,
-                        tint = FomingramViolet,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        "Копировать",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Копировать",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
                 if (message.isFromMe) {
@@ -330,9 +355,7 @@ private fun MessageBubble(
 ) {
     val isMe = message.isFromMe
     val bubbleColor = if (isMe) BubbleMe else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
     val timeColor = if (isMe) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-
     val alignment = if (isMe) Alignment.End else Alignment.Start
     val shape = if (isMe)
         RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp)
@@ -348,39 +371,70 @@ private fun MessageBubble(
                 .widthIn(max = 280.dp)
                 .clip(shape)
                 .background(bubbleColor)
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = onLongPress   // ← долгое нажатие
-                )
-                .padding(horizontal = 14.dp, vertical = 8.dp)
+                .combinedClickable(onClick = {}, onLongClick = onLongPress)
         ) {
-            Column {
-                Text(
-                    text = message.text,
-                    color = textColor,
-                    fontSize = 15.sp,
-                    lineHeight = 20.sp
-                )
-                Spacer(Modifier.height(2.dp))
-                Row(
-                    modifier = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Text(
-                        text = formatTime(message.timestamp),
-                        fontSize = 11.sp,
-                        color = timeColor
+            if (message.imageUri != null) {
+                Column {
+                    AsyncImage(
+                        model = message.imageUri,
+                        contentDescription = "Изображение",
+                        modifier = Modifier
+                            .widthIn(max = 280.dp)
+                            .heightIn(max = 300.dp)
+                            .clip(shape),
+                        contentScale = ContentScale.Crop
                     )
-                    if (isMe) {
-                        Spacer(Modifier.width(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = if (message.isRead) "✓✓" else "✓",
+                            text = formatTime(message.timestamp),
                             fontSize = 11.sp,
-                            color = if (message.isRead)
-                                Color(0xFFADD8E6)
-                            else Color.White.copy(alpha = 0.6f)
+                            color = timeColor
                         )
+                        if (isMe) {
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = if (message.isRead) "✓✓" else "✓",
+                                fontSize = 11.sp,
+                                color = if (message.isRead)
+                                    Color(0xFFADD8E6)
+                                else Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            } else {
+                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                    Text(
+                        text = message.text,
+                        color = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Row(
+                        modifier = Modifier.align(Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = formatTime(message.timestamp),
+                            fontSize = 11.sp,
+                            color = timeColor
+                        )
+                        if (isMe) {
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = if (message.isRead) "✓✓" else "✓",
+                                fontSize = 11.sp,
+                                color = if (message.isRead)
+                                    Color(0xFFADD8E6)
+                                else Color.White.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                 }
             }
@@ -393,7 +447,8 @@ private fun MessageInputBar(
     text: String,
     showError: Boolean,
     onTextChange: (String) -> Unit,
-    onSend: () -> Unit
+    onSend: () -> Unit,
+    onAttachClick: () -> Unit
 ) {
     Column {
         AnimatedVisibility(visible = showError, enter = fadeIn(), exit = fadeOut()) {
@@ -414,11 +469,11 @@ private fun MessageInputBar(
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
-                IconButton(onClick = { }) {
+                IconButton(onClick = onAttachClick) {
                     Icon(
                         Icons.Default.AttachFile,
                         contentDescription = "Прикрепить",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = FomingramViolet
                     )
                 }
 
