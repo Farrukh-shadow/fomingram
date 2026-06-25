@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ import com.fomingram.ui.theme.*
 @Composable
 fun ChatListScreen(
     onChatClick: (chatId: String, contactName: String) -> Unit,
+    onFirebaseChatClick: () -> Unit = {},
     viewModel: ChatListViewModel = viewModel(factory = ChatListViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -59,6 +61,14 @@ fun ChatListScreen(
                             Icons.Default.Search,
                             contentDescription = "Поиск",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    // ← кнопка Firebase чата
+                    IconButton(onClick = onFirebaseChatClick) {
+                        Icon(
+                            Icons.Default.Cloud,
+                            contentDescription = "Firebase чат",
+                            tint = FomingramViolet
                         )
                     }
                     IconButton(onClick = { }) {
